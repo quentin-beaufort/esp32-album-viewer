@@ -22,6 +22,15 @@ class Sender(private val client: EspClient) {
     /** Frame currently on the screen, resent when the screen answers 409. Worker thread only. */
     private var shown: Frame? = null
 
+    /** Last play/pause state sent. Worker thread only. */
+    private var shownPlaying = false
+
+    init {
+        // The screen forgets everything when it restarts, and nothing else would tell the phone
+        // while the same track keeps playing: repeat the state, a 409 brings the frame back.
+        executor.scheduleWithFixedDelay(::heartbeat, HEARTBEAT_S, HEARTBEAT_S, TimeUnit.SECONDS)
+    }
+
     fun sendFrame(frame: Frame) = enqueue { pendingFrame = frame; retries = 0 }
 
     fun sendState(playing: Boolean) = enqueue { pendingPlaying = playing }
@@ -82,8 +91,18 @@ class Sender(private val client: EspClient) {
         return false
     }
 
+    private fun heartbeat() {
+        if (shown == null) return
+        try {
+            sendStateNow(shownPlaying)
+        } catch (e: IOException) {
+            Log.w(TAG, "screen unreachable", e)
+        }
+    }
+
     private fun sendStateNow(playing: Boolean) {
         val frame = shown ?: return
+        shownPlaying = playing
         val response = client.postState(frame.trackId, playing)
         log("/state", response)
         if (response.code == 409 && sendFrameNow(frame)) {
@@ -111,5 +130,6 @@ class Sender(private val client: EspClient) {
         private const val TAG = "Sender"
         private const val MAX_RETRIES = 3
         private const val RETRY_DELAY_S = 5L
+        private const val HEARTBEAT_S = 15L
     }
 }

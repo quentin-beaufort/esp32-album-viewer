@@ -71,8 +71,10 @@ rallumé s'il était éteint.
 
 ### `POST /state`
 
-État de lecture, envoyé juste après `/frame`, puis au play et à la pause. Il sert surtout à
-détecter que l'ESP32 a perdu l'image (redémarrage, coupure de courant).
+État de lecture, envoyé juste après `/frame`, au play et à la pause, et répété toutes les
+15 secondes tant qu'une image est affichée. Il sert surtout à détecter que l'ESP32 a perdu l'image
+(redémarrage, coupure de courant) : sans cette répétition, l'écran resterait noir jusqu'au
+morceau suivant.
 
 ```json
 { "track_id": "…", "playing": true }

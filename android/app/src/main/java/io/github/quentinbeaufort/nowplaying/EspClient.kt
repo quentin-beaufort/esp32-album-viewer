@@ -15,7 +15,6 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.UnknownHostException
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -112,7 +111,6 @@ class EspClient private constructor(context: Context) {
         val done = CountDownLatch(1)
         var address: InetAddress? = null
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val executor = Executors.newSingleThreadExecutor()
             val callback = object : NsdManager.ServiceInfoCallback {
                 override fun onServiceUpdated(updated: NsdServiceInfo) {
                     address = updated.hostAddresses.firstOrNull { it is Inet4Address }
@@ -123,12 +121,14 @@ class EspClient private constructor(context: Context) {
                 override fun onServiceLost() = Unit
                 override fun onServiceInfoCallbackUnregistered() = Unit
             }
-            nsd.registerServiceInfoCallback(info, executor, callback)
+            // The callbacks only record the result, so they can run on NsdManager's own thread. An
+            // executor of ours must not be shut down: NsdManager still posts to it after unregistering
+            // (onServiceInfoCallbackUnregistered), and a rejected task crashes the app.
+            nsd.registerServiceInfoCallback(info, Runnable::run, callback)
             try {
                 done.await(NSD_TIMEOUT_S, TimeUnit.SECONDS)
             } finally {
                 runCatching { nsd.unregisterServiceInfoCallback(callback) }
-                executor.shutdown()
             }
         } else {
             @Suppress("DEPRECATION")
