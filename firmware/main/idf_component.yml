@@ -1,0 +1,9 @@
+dependencies:
+  idf:
+    version: ">=5.5.0"
+  # Décodeur JPEG (TJpgDec), maintenu par Espressif dans idf-extra-components
+  espressif/esp_jpeg:
+    version: "^1.3.1"
+  # mDNS, maintenu par Espressif dans esp-protocols
+  espressif/mdns:
+    version: "^1.14.0"

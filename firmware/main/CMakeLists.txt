@@ -1,0 +1,19 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "board.c"
+        "display.c"
+        "player.c"
+        "net.c"
+        "api.c"
+    INCLUDE_DIRS "."
+    PRIV_REQUIRES
+        esp_driver_i2c
+        esp_lcd
+        esp_wifi
+        esp_netif
+        esp_event
+        esp_http_server
+        esp_timer
+        nvs_flash
+        json)
