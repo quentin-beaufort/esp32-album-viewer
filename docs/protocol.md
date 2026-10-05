@@ -27,6 +27,14 @@ Ce sens a été vérifié sur le boîtier : le coin haut-gauche du portrait appa
 | Pochette | `x 0–480, y 0–480` | pochette carrée, pleine largeur, sans marge |
 | Texte | `x 0–480, y 480–800` | titre puis artiste, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
 
+Valeurs validées sur l'écran (image de test du 5 octobre) :
+
+| Élément | Police | Couleur | Position |
+|---|---|---|---|
+| Titre | gras, 38 px | blanc | centré sur `x = 240`, ligne de base `y = 590` |
+| Artiste | normal, 30 px | `RGB(205, 212, 230)` sur le fond de test | centré sur `x = 240`, ligne de base `y = 645` |
+| Fond texte | | couleur tirée de la pochette (`RGB(38, 52, 92)` pour le test) | `y 480–800` |
+
 Un titre ou un artiste trop long passe sur deux lignes, puis est tronqué avec « … ».
 
 ## Routes
