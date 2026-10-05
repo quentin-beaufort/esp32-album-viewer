@@ -1,0 +1,27 @@
+menu "Now Playing"
+
+    config NP_WIFI_SSID
+        string "Wi-Fi SSID"
+        default ""
+
+    config NP_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+
+    config NP_HOSTNAME
+        string "mDNS hostname (without .local)"
+        default "nowplaying"
+
+    config NP_TOKEN
+        string "X-Token shared with the phone"
+        default ""
+        help
+            Every POST request must carry this value in the X-Token header.
+            When empty, POST requests are refused.
+
+    config NP_MAX_JPEG_KB
+        int "Maximum JPEG size (KB)"
+        default 512
+        range 64 2048
+
+endmenu
