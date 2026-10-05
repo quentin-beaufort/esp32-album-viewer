@@ -24,9 +24,4 @@ menu "Now Playing"
         default 512
         range 64 2048
 
-    config NP_PROGRESS_HZ
-        int "Progress bar refresh rate (Hz)"
-        default 10
-        range 1 30
-
 endmenu

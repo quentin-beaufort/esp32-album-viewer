@@ -15,7 +15,7 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
 
     ESP_ERROR_CHECK(display_init());
-    ESP_ERROR_CHECK(player_start());
+    ESP_ERROR_CHECK(player_init());
     ESP_ERROR_CHECK(net_start());
     ESP_ERROR_CHECK(api_start());
 }

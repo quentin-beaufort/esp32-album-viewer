@@ -1,6 +1,5 @@
 #include "api.h"
 
-#include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
 #include "display.h"
@@ -60,18 +59,6 @@ static bool authorized(httpd_req_t *req)
     return true;
 }
 
-static uint32_t header_color(httpd_req_t *req, const char *name, uint32_t fallback)
-{
-    char buf[16];
-    if (httpd_req_get_hdr_value_str(req, name, buf, sizeof(buf)) != ESP_OK) {
-        return fallback;
-    }
-    const char *hex = buf[0] == '#' ? buf + 1 : buf;
-    char *end;
-    unsigned long v = strtoul(hex, &end, 16);
-    return (strlen(hex) == 6 && *end == '\0') ? (uint32_t)v : fallback;
-}
-
 static esp_err_t recv_body(httpd_req_t *req, uint8_t *buf, size_t len)
 {
     size_t got = 0;
@@ -104,20 +91,10 @@ static esp_err_t frame_handler(httpd_req_t *req)
         return send_status(req, "413 Payload Too Large", "jpeg too large");
     }
 
-    display_frame_opts_t opts = {
-        .rotation = 90,
-        .bar_fg = header_color(req, "X-Bar-Fg", 0xFFFFFF),
-        .bar_bg = header_color(req, "X-Bar-Bg", 0x404040),
-    };
-    char rot[8];
-    if (httpd_req_get_hdr_value_str(req, "X-Rotation", rot, sizeof(rot)) == ESP_OK && strcmp(rot, "270") == 0) {
-        opts.rotation = 270;
-    }
-
     if (recv_body(req, s_jpeg, req->content_len) != ESP_OK) {
         return ESP_FAIL; /* connection is broken, let httpd close it */
     }
-    esp_err_t err = display_show_jpeg(s_jpeg, req->content_len, &opts);
+    esp_err_t err = display_show_jpeg(s_jpeg, req->content_len);
     if (err == ESP_ERR_INVALID_SIZE) {
         return send_status(req, "400 Bad Request", "jpeg must be 800x480");
     } else if (err != ESP_OK) {
@@ -144,14 +121,10 @@ static esp_err_t state_handler(httpd_req_t *req)
     cJSON *json = cJSON_Parse(body);
     const cJSON *track = cJSON_GetObjectItem(json, "track_id");
     const cJSON *playing = cJSON_GetObjectItem(json, "playing");
-    const cJSON *pos = cJSON_GetObjectItem(json, "position_ms");
-    const cJSON *dur = cJSON_GetObjectItem(json, "duration_ms");
-    const cJSON *speed = cJSON_GetObjectItem(json, "speed");
     esp_err_t ret;
-    if (!cJSON_IsString(track) || !cJSON_IsBool(playing) || !cJSON_IsNumber(pos) || !cJSON_IsNumber(dur)) {
-        ret = send_status(req, "400 Bad Request", "expected track_id, playing, position_ms, duration_ms");
-    } else if (!player_update(track->valuestring, cJSON_IsTrue(playing), (int64_t)pos->valuedouble,
-                              (int64_t)dur->valuedouble, cJSON_IsNumber(speed) ? (float)speed->valuedouble : 1.0f)) {
+    if (!cJSON_IsString(track) || !cJSON_IsBool(playing)) {
+        ret = send_status(req, "400 Bad Request", "expected track_id and playing");
+    } else if (!player_update(track->valuestring, cJSON_IsTrue(playing))) {
         ret = send_status(req, "409 Conflict", "unknown track, send /frame first");
     } else {
         ret = send_no_content(req);
@@ -177,8 +150,6 @@ static esp_err_t status_handler(httpd_req_t *req)
     cJSON *json = cJSON_CreateObject();
     cJSON_AddStringToObject(json, "track_id", st.track_id);
     cJSON_AddBoolToObject(json, "playing", st.playing);
-    cJSON_AddNumberToObject(json, "position_ms", (double)st.position_ms);
-    cJSON_AddNumberToObject(json, "duration_ms", (double)st.duration_ms);
     cJSON_AddNumberToObject(json, "rssi", net_rssi());
     cJSON_AddNumberToObject(json, "uptime_s", (double)(esp_timer_get_time() / 1000000));
     cJSON_AddNumberToObject(json, "free_internal", heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
