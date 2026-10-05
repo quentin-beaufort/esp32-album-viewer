@@ -16,17 +16,26 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withTranslation
 import androidx.palette.graphics.Palette
 import java.io.ByteArrayOutputStream
+import kotlin.math.roundToInt
 
 /** Draws the portrait screen described in docs/protocol.md and encodes it for /frame. */
 object FrameRenderer {
     const val WIDTH = 480
     const val HEIGHT = 800
+
+    /**
+     * The panel's pixels are not square: 0.1188 mm along the portrait height, 0.1122 mm across.
+     * The screen is laid out in square units, LAYOUT_HEIGHT tall, then squeezed into HEIGHT pixels.
+     */
+    private const val PIXEL_ASPECT = 0.1188f / 0.1122f
+    private val LAYOUT_HEIGHT = (HEIGHT * PIXEL_ASPECT).roundToInt()
+
     private const val COVER = 480
     private const val TEXT_MARGIN = 24
     private const val TITLE_SIZE = 38f
     private const val ARTIST_SIZE = 30f
-    private const val TITLE_BASELINE = 590
-    private const val ARTIST_BASELINE = 645
+    private const val TITLE_BASELINE = 596
+    private const val ARTIST_BASELINE = 654
     private const val MAX_LINES = 2
     private const val JPEG_QUALITY = 90
     private val FALLBACK_BACKGROUND = Color.rgb(38, 52, 92)
@@ -37,6 +46,7 @@ object FrameRenderer {
         val out = createBitmap(WIDTH, HEIGHT)
         val canvas = Canvas(out)
         canvas.drawColor(background)
+        canvas.scale(1f, HEIGHT / LAYOUT_HEIGHT.toFloat())
         if (cover != null) {
             canvas.drawBitmap(cover, centerSquare(cover), Rect(0, 0, COVER, COVER), Paint(Paint.FILTER_BITMAP_FLAG))
         }

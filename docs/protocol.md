@@ -20,20 +20,31 @@ Le téléphone compose l'écran en **portrait 480×800**, le tourne de **90° da
 (`Matrix.postRotate(90f)`), puis l'encode en JPEG **baseline** (pas progressif) de **800×480**.
 Ce sens a été vérifié sur le boîtier : le coin haut-gauche du portrait apparaît bien en haut à gauche.
 
-### Mise en page (portrait 480×800)
+### Pixels non carrés
 
-| Zone | Rectangle portrait | Contenu |
+Les pixels de la dalle ne sont pas carrés : 0,1188 mm × 0,1122 mm (zone active 95,04 × 53,86 mm).
+En portrait, un pixel est donc 6 % plus haut que large, et un carré de 480×480 pixels apparaît
+étiré en hauteur (53,9 × 57,0 mm).
+
+Le téléphone compose donc l'écran en **unités carrées**, sur une hauteur de
+`800 × 0,1188 / 0,1122 ≈ 847`, puis le resserre verticalement dans les 800 pixels
+(`Canvas.scale(1, 800 / 847)`). Les positions ci-dessous sont en unités carrées.
+
+### Mise en page (portrait 480×847 unités carrées)
+
+| Zone | Rectangle | Contenu |
 |---|---|---|
 | Pochette | `x 0–480, y 0–480` | pochette carrée, pleine largeur, sans marge |
-| Texte | `x 0–480, y 480–800` | titre puis artiste, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
-
-Valeurs validées sur l'écran (image de test du 5 octobre) :
+| Texte | `x 0–480, y 480–847` | titre puis artiste, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
 
 | Élément | Police | Couleur | Position |
 |---|---|---|---|
-| Titre | gras, 38 px | blanc | centré sur `x = 240`, ligne de base `y = 590` |
-| Artiste | normal, 30 px | `RGB(205, 212, 230)` sur le fond de test | centré sur `x = 240`, ligne de base `y = 645` |
-| Fond texte | | couleur tirée de la pochette (`RGB(38, 52, 92)` pour le test) | `y 480–800` |
+| Titre | gras, 38 | blanc sur fond sombre | centré sur `x = 240`, ligne de base `y = 596` |
+| Artiste | normal, 30 | couleur du titre mêlée à 20 % de fond | centré sur `x = 240`, ligne de base `y = 654` |
+| Fond texte | | couleur tirée de la pochette, `RGB(38, 52, 92)` à défaut | `y 480–847` |
+
+Ces valeurs reprennent l'image de test validée le 5 octobre (lignes de base 590 et 645 en pixels),
+avec la même distance physique sous la pochette.
 
 Un titre ou un artiste trop long passe sur deux lignes, puis est tronqué avec « … ».
 
