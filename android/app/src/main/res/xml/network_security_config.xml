@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- No cleartext anywhere. The screen is reached through EspClient's own HTTP/1.1 client on a raw
+     socket, which this policy does not cover: see android/README.md. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

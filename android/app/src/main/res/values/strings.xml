@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Now Playing</string>
+    <string name="device_label">Récepteur Bluetooth (UGREEN)</string>
+    <string name="device_none">Aucun : toujours actif</string>
+    <string name="device_permission">Autoriser l\'accès aux appareils Bluetooth</string>
+    <string name="token_label">Jeton (X-Token)</string>
+    <string name="fallback_ip_label">IP de secours (facultative)</string>
+    <string name="fallback_ip_hint">192.168.1.112</string>
+    <string name="notification_access">Accès aux notifications</string>
+    <string name="preview_label">Aperçu</string>
+    <string name="send_test">Envoyer un test</string>
+    <string name="status_access_ok">Accès aux notifications : accordé</string>
+    <string name="status_access_missing">Accès aux notifications : à accorder</string>
+    <string name="test_title">Titre de test</string>
+    <string name="test_artist">Artiste de test</string>
+    <string name="sending">Envoi…</string>
+</resources>
