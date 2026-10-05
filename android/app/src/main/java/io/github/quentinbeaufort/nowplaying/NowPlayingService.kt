@@ -56,10 +56,13 @@ class NowPlayingService : NotificationListenerService() {
         sessions = getSystemService(MediaSessionManager::class.java)
         listening = true
 
-        ContextCompat.registerReceiver(
-            this, a2dpReceiver, IntentFilter(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED),
-            ContextCompat.RECEIVER_NOT_EXPORTED,
-        )
+        // Exported: these broadcasts come from the Bluetooth app, which has its own uid, so a
+        // non-exported receiver never gets them. Both actions are protected and only the system
+        // can send them.
+        val filter = IntentFilter(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED).apply {
+            addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+        }
+        ContextCompat.registerReceiver(this, a2dpReceiver, filter, ContextCompat.RECEIVER_EXPORTED)
         prefs.raw.registerOnSharedPreferenceChangeListener(prefsListener)
         queryReceiverState()
         update()
@@ -103,9 +106,12 @@ class NowPlayingService : NotificationListenerService() {
         override fun onReceive(context: Context, intent: Intent) {
             val device = IntentCompat.getParcelableExtra(intent, BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
             if (device == null || !device.address.equals(prefs.deviceMac, ignoreCase = true)) return
-            val state = intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED)
-            receiverConnected = state == BluetoothProfile.STATE_CONNECTED
-            Log.i(TAG, "receiver connected: $receiverConnected")
+            if (intent.action == BluetoothDevice.ACTION_ACL_DISCONNECTED && !receiverConnected) return
+            // The link going down (receiver switched off or unplugged) also ends the A2DP connection.
+            receiverConnected = intent.action == BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED &&
+                intent.getIntExtra(BluetoothProfile.EXTRA_STATE, BluetoothProfile.STATE_DISCONNECTED) ==
+                BluetoothProfile.STATE_CONNECTED
+            Log.i(TAG, "${intent.action}: receiver connected = $receiverConnected")
             update()
         }
     }
