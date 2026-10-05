@@ -40,8 +40,8 @@ Au premier lancement :
 | `SettingsActivity.kt` | écran de réglages |
 
 Une nouvelle image est envoyée 300 ms après le dernier changement de métadonnées, puis de
-nouveau si la pochette arrive plus tard. L'état play/pause suit avec `/state` ; une réponse
-`409` (écran redémarré) fait renvoyer l'image puis l'état.
+nouveau si la pochette arrive plus tard. L'état play/pause suit avec `/state`, répété toutes
+les 15 secondes ; une réponse `409` (écran redémarré) fait renvoyer l'image puis l'état.
 
 ### Pourquoi un client HTTP sur socket
 
