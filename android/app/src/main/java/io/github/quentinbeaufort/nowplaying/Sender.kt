@@ -19,15 +19,20 @@ class Sender(private val client: EspClient) {
     private var pendingPlaying: Boolean? = null
     private var retries = 0
 
-    /** Frame currently on the screen, resent when the screen answers 409. Worker thread only. */
-    private var shown: Frame? = null
+    /**
+     * Frame the screen should show: the latest one taken from the queue, until /off. It is
+     * resent when the screen answers 409, so a frame whose upload failed half-way (or whose
+     * answer was lost) is never replaced by an older one. Worker thread only.
+     */
+    private var current: Frame? = null
 
     /** Last play/pause state sent. Worker thread only. */
-    private var shownPlaying = false
+    private var currentPlaying = false
 
     init {
         // The screen forgets everything when it restarts, and nothing else would tell the phone
         // while the same track keeps playing: repeat the state, a 409 brings the frame back.
+        // This also catches up after a frame that could not be sent.
         executor.scheduleWithFixedDelay(::heartbeat, HEARTBEAT_S, HEARTBEAT_S, TimeUnit.SECONDS)
     }
 
@@ -64,9 +69,10 @@ class Sender(private val client: EspClient) {
             if (!off && frame == null && playing == null) return
             try {
                 if (off) {
-                    shown = null
+                    current = null
                     log("/off", client.postOff())
                 }
+                if (frame != null) current = frame
                 if (frame != null && !sendFrameNow(frame)) {
                     retryLater(frame, playing)
                     return
@@ -83,30 +89,31 @@ class Sender(private val client: EspClient) {
     private fun sendFrameNow(frame: Frame): Boolean {
         val response = client.postFrame(frame.trackId, frame.jpeg)
         log("/frame", response)
-        if (response.code == 204) {
-            shown = frame
-            return true
+        if (response.code == 400 || response.code == 413) {
+            // The screen will never take this image: stop resending it.
+            if (current === frame) current = null
         }
-        shown = null
-        return false
+        return response.code == 204
     }
 
     private fun heartbeat() {
-        if (shown == null) return
+        if (current == null) return
+        // A newer frame is about to go: it will be followed by its own state.
+        if (synchronized(lock) { pendingFrame != null || pendingOff }) return
         try {
-            sendStateNow(shownPlaying)
+            sendStateNow(currentPlaying)
         } catch (e: IOException) {
             Log.w(TAG, "screen unreachable", e)
         }
     }
 
     private fun sendStateNow(playing: Boolean) {
-        val frame = shown ?: return
-        shownPlaying = playing
+        val frame = current ?: return
+        currentPlaying = playing
         val response = client.postState(frame.trackId, playing)
         log("/state", response)
         if (response.code == 409 && sendFrameNow(frame)) {
-            // The screen lost the image (restart): show it again, then the state.
+            // The screen lost the image (restart, failed upload): show it again, then the state.
             log("/state", client.postState(frame.trackId, playing))
         }
     }

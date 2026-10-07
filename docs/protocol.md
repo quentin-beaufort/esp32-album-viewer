@@ -72,9 +72,10 @@ rallumé s'il était éteint.
 ### `POST /state`
 
 État de lecture, envoyé juste après `/frame`, au play et à la pause, et répété toutes les
-15 secondes tant qu'une image est affichée. Il sert surtout à détecter que l'ESP32 a perdu l'image
-(redémarrage, coupure de courant) : sans cette répétition, l'écran resterait noir jusqu'au
-morceau suivant.
+15 secondes tant qu'une image doit être affichée. Il sert surtout à détecter que l'ESP32 n'a pas
+l'image voulue (redémarrage, coupure de courant, envoi de `/frame` interrompu) : sans cette
+répétition, l'écran resterait noir ou sur l'ancien titre jusqu'au morceau suivant. Le `track_id`
+envoyé est toujours celui de la dernière image voulue, jamais d'une image plus ancienne.
 
 ```json
 { "track_id": "…", "playing": true }
@@ -91,10 +92,18 @@ puis `/state`.
 Le UGREEN s'est déconnecté : l'ESP32 éteint le rétroéclairage et oublie le morceau courant.
 Corps vide. Réponse `204`.
 
-### `GET /status`
+### `GET /status` (et `GET /`)
 
 Sans jeton, pour le débogage : JSON avec le morceau courant, l'état de lecture, le RSSI,
-l'uptime et la mémoire libre.
+l'uptime, la raison du dernier redémarrage (`reset_reason`), le nombre de coupures Wi-Fi depuis
+le démarrage (`wifi_disconnects`) et la mémoire libre.
+
+## Écran de diagnostic
+
+Du démarrage jusqu'à la première image (ou `/off`), l'ESP32 affiche en texte sur fond noir :
+raison du redémarrage, état du Wi-Fi et IP, état du serveur HTTP, dernière requête reçue et son
+résultat, mémoire libre, puis les dernières lignes du journal. Il s'éteint au bout de 10 minutes
+sans image (réglable dans `menuconfig`).
 
 ```sh
 curl http://nowplaying.local/status

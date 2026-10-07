@@ -15,6 +15,7 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.UnknownHostException
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /**
@@ -148,28 +149,39 @@ class EspClient private constructor(context: Context) {
 
     private fun request(address: InetAddress, path: String, headers: Map<String, String>, body: ByteArray): Response {
         Socket().use { socket ->
-            socket.connect(InetSocketAddress(address, PORT), CONNECT_TIMEOUT_MS)
-            socket.soTimeout = READ_TIMEOUT_MS
-            val head = buildString {
-                append("POST ").append(path).append(" HTTP/1.1\r\n")
-                append("Host: ").append(HOST).append("\r\n")
-                append("Connection: close\r\n")
-                append("Content-Length: ").append(body.size).append("\r\n")
-                headers.forEach { (name, value) -> append(name).append(": ").append(value).append("\r\n") }
-                append("\r\n")
-            }
-            val output = socket.getOutputStream()
+            // soTimeout only bounds reads: without this, a write to a screen that dropped off the
+            // network blocks until TCP gives up, minutes later, and every newer track waits behind it.
+            val deadline = WATCHDOG.schedule({ runCatching { socket.close() } }, REQUEST_TIMEOUT_MS, TimeUnit.MILLISECONDS)
             try {
-                output.write(head.toByteArray(Charsets.ISO_8859_1))
-                output.write(body)
-                output.flush()
-            } catch (e: IOException) {
-                // The screen answers a bad token before reading the body and may close early:
-                // its response is still worth reading.
-                Log.d(TAG, "write interrupted", e)
+                return exchange(socket, address, path, headers, body)
+            } finally {
+                deadline.cancel(false)
             }
-            return readResponse(BufferedInputStream(socket.getInputStream()))
         }
+    }
+
+    private fun exchange(socket: Socket, address: InetAddress, path: String, headers: Map<String, String>, body: ByteArray): Response {
+        socket.connect(InetSocketAddress(address, PORT), CONNECT_TIMEOUT_MS)
+        socket.soTimeout = READ_TIMEOUT_MS
+        val head = buildString {
+            append("POST ").append(path).append(" HTTP/1.1\r\n")
+            append("Host: ").append(HOST).append("\r\n")
+            append("Connection: close\r\n")
+            append("Content-Length: ").append(body.size).append("\r\n")
+            headers.forEach { (name, value) -> append(name).append(": ").append(value).append("\r\n") }
+            append("\r\n")
+        }
+        val output = socket.getOutputStream()
+        try {
+            output.write(head.toByteArray(Charsets.ISO_8859_1))
+            output.write(body)
+            output.flush()
+        } catch (e: IOException) {
+            // The screen answers a bad token before reading the body and may close early:
+            // its response is still worth reading.
+            Log.d(TAG, "write interrupted", e)
+        }
+        return readResponse(BufferedInputStream(socket.getInputStream()))
     }
 
     private fun readResponse(input: InputStream): Response {
@@ -215,8 +227,13 @@ class EspClient private constructor(context: Context) {
         private const val PORT = 80
         private const val CONNECT_TIMEOUT_MS = 3000
         private const val READ_TIMEOUT_MS = 10000
+        private const val REQUEST_TIMEOUT_MS = 20000L
         private const val NSD_TIMEOUT_S = 5L
         private const val MAX_BODY = 4096
+
+        private val WATCHDOG = Executors.newSingleThreadScheduledExecutor { task ->
+            Thread(task, "esp-request-deadline").apply { isDaemon = true }
+        }
 
         @Volatile
         private var instance: EspClient? = null

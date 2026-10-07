@@ -18,9 +18,12 @@ static const char *TAG = "display";
 static esp_lcd_panel_handle_t s_panel;
 static uint16_t *s_fb[2];
 static int s_front;              /* index of the frame buffer being scanned out */
-static SemaphoreHandle_t s_lock; /* guards s_front, s_backlight and frame buffer writes */
+static SemaphoreHandle_t s_lock; /* guards s_front, s_backlight, s_mode and frame buffer writes */
 static SemaphoreHandle_t s_vsync;
 static bool s_backlight;
+
+/* What the screen shows: the diagnostic text from boot until the first image or /off. */
+static enum { MODE_DIAG, MODE_PHOTO, MODE_OFF } s_mode = MODE_DIAG;
 
 static IRAM_ATTR bool on_vsync(esp_lcd_panel_handle_t panel, const esp_lcd_rgb_panel_event_data_t *edata, void *ctx)
 {
@@ -47,6 +50,20 @@ esp_err_t display_init(void)
     };
     ESP_RETURN_ON_ERROR(esp_lcd_rgb_panel_register_event_callbacks(s_panel, &cbs, NULL), TAG, "callbacks");
     return ESP_OK;
+}
+
+/* Shows frame buffer `back` and turns the backlight on. Called with s_lock held. */
+static void present(int back)
+{
+    /* Switch right after a VSYNC so the panel does not show half of each image. */
+    xSemaphoreTake(s_vsync, 0);
+    xSemaphoreTake(s_vsync, pdMS_TO_TICKS(100));
+    esp_lcd_panel_draw_bitmap(s_panel, 0, 0, BOARD_LCD_H_RES, BOARD_LCD_V_RES, s_fb[back]);
+    s_front = back;
+    if (!s_backlight) {
+        board_backlight(true);
+        s_backlight = true;
+    }
 }
 
 esp_err_t display_show_jpeg(const uint8_t *jpg, size_t len)
@@ -78,15 +95,8 @@ esp_err_t display_show_jpeg(const uint8_t *jpg, size_t len)
     }
     int64_t t1 = esp_timer_get_time();
 
-    /* Switch right after a VSYNC so the panel does not show half of each image. */
-    xSemaphoreTake(s_vsync, 0);
-    xSemaphoreTake(s_vsync, pdMS_TO_TICKS(100));
-    esp_lcd_panel_draw_bitmap(s_panel, 0, 0, BOARD_LCD_H_RES, BOARD_LCD_V_RES, s_fb[back]);
-    s_front = back;
-    if (!s_backlight) {
-        board_backlight(true);
-        s_backlight = true;
-    }
+    present(back);
+    s_mode = MODE_PHOTO;
     xSemaphoreGive(s_lock);
 
     ESP_LOGI(TAG, "frame shown, %u bytes, decoded in %lld ms", (unsigned)len, (t1 - t0) / 1000);
@@ -98,5 +108,28 @@ void display_off(void)
     xSemaphoreTake(s_lock, portMAX_DELAY);
     board_backlight(false);
     s_backlight = false;
+    s_mode = MODE_OFF;
     xSemaphoreGive(s_lock);
+}
+
+bool display_diag_active(void)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    bool active = s_mode == MODE_DIAG;
+    xSemaphoreGive(s_lock);
+    return active;
+}
+
+esp_err_t display_show_diag(void (*paint)(uint16_t *fb, void *ctx), void *ctx)
+{
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    if (s_mode != MODE_DIAG) {
+        xSemaphoreGive(s_lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    int back = 1 - s_front;
+    paint(s_fb[back], ctx);
+    present(back);
+    xSemaphoreGive(s_lock);
+    return ESP_OK;
 }

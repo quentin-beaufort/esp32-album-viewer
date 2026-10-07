@@ -1,4 +1,5 @@
 #include "api.h"
+#include "diag.h"
 #include "display.h"
 #include "esp_check.h"
 #include "net.h"
@@ -15,6 +16,7 @@ void app_main(void)
     ESP_ERROR_CHECK(err);
 
     ESP_ERROR_CHECK(display_init());
+    diag_start();
     ESP_ERROR_CHECK(player_init());
     ESP_ERROR_CHECK(net_start());
     ESP_ERROR_CHECK(api_start());

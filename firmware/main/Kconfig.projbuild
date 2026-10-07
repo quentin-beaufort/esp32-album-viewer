@@ -24,4 +24,17 @@ menu "Now Playing"
         default 512
         range 64 2048
 
+    config NP_DIAG_SCREEN
+        bool "Diagnostic screen at boot"
+        default y
+        help
+            From boot until the first image, show the reset reason, the Wi-Fi state, the
+            HTTP server state, the last request and the latest log lines.
+
+    config NP_DIAG_SECONDS
+        int "Turn the diagnostic screen off after (seconds, 0: never)"
+        depends on NP_DIAG_SCREEN
+        default 600
+        range 0 86400
+
 endmenu

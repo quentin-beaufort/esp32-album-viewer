@@ -19,8 +19,11 @@ idf.py build
 idf.py -p COM3 flash monitor   # adapter le port
 ```
 
-Au démarrage l'écran reste éteint jusqu'au premier `POST /frame`. Le moniteur série affiche
-l'adresse IP et `http://nowplaying.local`.
+Au démarrage, l'écran affiche un diagnostic en texte jusqu'au premier `POST /frame` : raison du
+redémarrage (une « baisse de tension » désigne un problème d'alimentation ou de câble), Wi-Fi et
+IP, serveur HTTP, dernière requête reçue, mémoire libre et dernières lignes du journal. Il
+s'éteint après 10 minutes sans image. Ces deux réglages sont dans `menuconfig`, menu
+« Now Playing ». Le moniteur série affiche les mêmes lignes de journal.
 
 ## Test sans téléphone
 
@@ -44,3 +47,6 @@ curl -X POST -H "X-Token: $TOKEN" http://nowplaying.local/off
 | `main/player.c` | morceau affiché et état de lecture (pour le 409 de `/state`) |
 | `main/net.c` | Wi-Fi (sans économie d'énergie, reconnexion automatique) et mDNS |
 | `main/api.c` | serveur HTTP : `/frame`, `/state`, `/off`, `/status` |
+| `main/diag.c` | écran de diagnostic au démarrage, copie des lignes du journal |
+| `main/console.c` | texte sur fond noir dans le framebuffer, en portrait |
+| `main/font_mono.c` | police monospace générée par `tools/gen_font.py` (DejaVu Sans Mono), à ne pas éditer |

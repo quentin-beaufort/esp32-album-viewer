@@ -41,7 +41,9 @@ Au premier lancement :
 
 Une nouvelle image est envoyée 300 ms après le dernier changement de métadonnées, puis de
 nouveau si la pochette arrive plus tard. L'état play/pause suit avec `/state`, répété toutes
-les 15 secondes ; une réponse `409` (écran redémarré) fait renvoyer l'image puis l'état.
+les 15 secondes ; une réponse `409` (écran redémarré, ou image précédente mal reçue) fait
+renvoyer la dernière image voulue puis l'état. Chaque requête est coupée au bout de 20 s, pour
+qu'un écran injoignable ne bloque pas les morceaux suivants.
 
 ### Pourquoi un client HTTP sur socket
 
