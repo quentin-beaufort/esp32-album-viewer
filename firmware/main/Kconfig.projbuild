@@ -29,10 +29,11 @@ menu "Now Playing"
         default y
         help
             From boot until the first image, show the reset reason, the Wi-Fi state, the
-            HTTP server state, the last request and the latest log lines.
+            HTTP server state, the last request and the latest log lines. Touching the
+            screen shows or hides it at any time, whatever this option says.
 
     config NP_DIAG_SECONDS
-        int "Turn the diagnostic screen off after (seconds, 0: never)"
+        int "Hide the boot diagnostic screen after (seconds, 0: never)"
         depends on NP_DIAG_SCREEN
         default 600
         range 0 86400

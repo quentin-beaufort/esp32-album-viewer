@@ -2,10 +2,14 @@
 
 #include <stdbool.h>
 
-/* Diagnostic screen shown from boot until the first image (or /off): reset reason, Wi-Fi,
- * HTTP server, last request, memory and the latest log lines. Call right after
- * display_init, so that the rest of the start-up shows in the log lines. */
+/* Diagnostic screen, shown from boot until the first image (or /off) and then whenever the
+ * screen is touched: reset reason, Wi-Fi, HTTP server, last request, memory and the latest log
+ * lines. Call right after display_init, so that the rest of the start-up shows in the log
+ * lines. */
 void diag_start(void);
+
+/* Redraws the diagnostic now instead of at the next refresh, if it is showing. */
+void diag_refresh(void);
 
 void diag_http_ready(bool ready);
 

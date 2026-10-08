@@ -5,6 +5,7 @@
 #include "net.h"
 #include "nvs_flash.h"
 #include "player.h"
+#include "touch.h"
 
 void app_main(void)
 {
@@ -17,6 +18,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(display_init());
     diag_start();
+    ESP_ERROR_CHECK(touch_start());
     ESP_ERROR_CHECK(player_init());
     ESP_ERROR_CHECK(net_start());
     ESP_ERROR_CHECK(api_start());

@@ -260,30 +260,39 @@ static void paint(uint16_t *fb, void *ctx)
     }
 }
 
+static TaskHandle_t s_task;
+
 static void diag_task(void *arg)
 {
-    int64_t end_us = CONFIG_NP_DIAG_SECONDS > 0 ? (int64_t)CONFIG_NP_DIAG_SECONDS * 1000000 : INT64_MAX;
-    while (display_diag_active()) {
-        if (esp_timer_get_time() >= end_us) {
-            ESP_LOGI(TAG, "no image after %d s, screen off", CONFIG_NP_DIAG_SECONDS);
-            display_off();
-            break;
+#if CONFIG_NP_DIAG_SCREEN && CONFIG_NP_DIAG_SECONDS > 0
+    int64_t boot_end_us = (int64_t)CONFIG_NP_DIAG_SECONDS * 1000000;
+#else
+    int64_t boot_end_us = INT64_MAX;
+#endif
+    for (;;) {
+        if (esp_timer_get_time() >= boot_end_us) {
+            boot_end_us = INT64_MAX;
+            display_end_boot_diag();
         }
-        build();
-        display_show_diag(paint, NULL);
-        vTaskDelay(pdMS_TO_TICKS(REFRESH_MS));
+        if (display_diag_active()) {
+            build();
+            display_show_diag(paint, NULL);
+        }
+        /* diag_refresh wakes the task up early. */
+        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(REFRESH_MS));
     }
-    vTaskDelete(NULL);
+}
+
+void diag_refresh(void)
+{
+    if (s_task) {
+        xTaskNotifyGive(s_task);
+    }
 }
 
 void diag_start(void)
 {
-#if CONFIG_NP_DIAG_SCREEN
     s_prev_vprintf = esp_log_set_vprintf(log_vprintf);
     ESP_LOGW(TAG, "reset reason: %s", diag_reset_reason());
-    xTaskCreate(diag_task, "diag", 4096, NULL, 2, NULL);
-#else
-    ESP_LOGI(TAG, "reset reason: %s", diag_reset_reason());
-    display_off();
-#endif
+    xTaskCreate(diag_task, "diag", 4096, NULL, 2, &s_task);
 }

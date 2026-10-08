@@ -25,6 +25,9 @@ IP, serveur HTTP, dernière requête reçue, mémoire libre et dernières lignes
 s'éteint après 10 minutes sans image. Ces deux réglages sont dans `menuconfig`, menu
 « Now Playing ». Le moniteur série affiche les mêmes lignes de journal.
 
+Ensuite, un appui sur l'écran tactile affiche ce diagnostic, et un nouvel appui revient à la
+pochette. Les pochettes reçues pendant ce temps sont gardées et s'affichent au retour.
+
 ## Test sans téléphone
 
 Il faut un JPEG baseline 800×480 (par exemple avec ImageMagick :
@@ -42,11 +45,12 @@ curl -X POST -H "X-Token: $TOKEN" http://nowplaying.local/off
 
 | Fichier | Rôle |
 |---|---|
-| `main/board.c` | broches et timings de l'écran RGB, expandeur CH422G (rétroéclairage), repris de l'exemple Waveshare |
+| `main/board.c` | broches et timings de l'écran RGB, expandeur CH422G (rétroéclairage, reset du tactile), repris de l'exemple Waveshare |
 | `main/display.c` | décodage JPEG dans le framebuffer caché, bascule au VSYNC |
 | `main/player.c` | morceau affiché et état de lecture (pour le 409 de `/state`) |
 | `main/net.c` | Wi-Fi (sans économie d'énergie, reconnexion automatique) et mDNS |
 | `main/api.c` | serveur HTTP : `/frame`, `/state`, `/off`, `/status` |
-| `main/diag.c` | écran de diagnostic au démarrage, copie des lignes du journal |
+| `main/diag.c` | écran de diagnostic (démarrage et appui sur l'écran), copie des lignes du journal |
+| `main/touch.c` | contrôleur tactile GT911 : un appui affiche ou masque le diagnostic |
 | `main/console.c` | texte sur fond noir dans le framebuffer, en portrait |
 | `main/font_mono.c` | police monospace générée par `tools/gen_font.py` (DejaVu Sans Mono), à ne pas éditer |
