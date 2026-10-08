@@ -34,6 +34,7 @@ Au premier lancement :
 | Fichier | Rôle |
 |---|---|
 | `NowPlayingService.kt` | `NotificationListenerService` : suit le UGREEN (A2DP) et la session de `deezer.android.app` |
+| `DeezerApi.kt` | artistes du morceau via l'API publique de Deezer, pour la ligne « feat. » |
 | `FrameRenderer.kt` | rendu portrait 480×800, rotation de 90° horaire, JPEG 800×480 |
 | `Sender.kt` | file sérialisée vers l'écran : une image en attente est remplacée par la plus récente |
 | `EspClient.kt` | résolution de l'adresse et mini client HTTP |
@@ -41,7 +42,9 @@ Au premier lancement :
 
 Une nouvelle image est envoyée 300 ms après le dernier changement de métadonnées, puis de
 nouveau si la pochette arrive plus tard. L'état play/pause suit avec `/state`, répété toutes
-les 15 secondes ; une réponse `409` (écran redémarré) fait renvoyer l'image puis l'état.
+les 15 secondes ; une réponse `409` (écran redémarré, ou image précédente mal reçue) fait
+renvoyer la dernière image voulue puis l'état. Chaque requête est coupée au bout de 20 s, pour
+qu'un écran injoignable ne bloque pas les morceaux suivants.
 
 ### Pourquoi un client HTTP sur socket
 

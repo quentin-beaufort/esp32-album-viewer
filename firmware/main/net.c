@@ -17,6 +17,12 @@ static const char *TAG = "net";
 
 static int s_retry_delay_ms = 500;
 
+/* Read by the diagnostic screen; written from the event loop only. */
+static volatile net_state_t s_state = NET_CONNECTING;
+static volatile uint32_t s_ip;
+static volatile int s_last_reason;
+static volatile int s_disconnects;
+
 static void reconnect_task(void *arg)
 {
     vTaskDelay(pdMS_TO_TICKS(s_retry_delay_ms));
@@ -31,6 +37,10 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *ev = data;
         ESP_LOGW(TAG, "disconnected (reason %d), retry in %d ms", ev->reason, s_retry_delay_ms);
+        s_state = NET_DISCONNECTED;
+        s_ip = 0;
+        s_last_reason = ev->reason;
+        s_disconnects++;
         /* Retry from a short-lived task so the event loop is never blocked. */
         xTaskCreate(reconnect_task, "wifi_retry", 2048, NULL, 3, NULL);
         s_retry_delay_ms = s_retry_delay_ms * 2 > RECONNECT_MAX_DELAY_MS ? RECONNECT_MAX_DELAY_MS : s_retry_delay_ms * 2;
@@ -38,6 +48,8 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         ip_event_got_ip_t *ev = data;
         ESP_LOGI(TAG, "got IP " IPSTR ", reachable at http://%s.local", IP2STR(&ev->ip_info.ip), CONFIG_NP_HOSTNAME);
         s_retry_delay_ms = 500;
+        s_ip = ev->ip_info.ip.addr;
+        s_state = NET_CONNECTED;
     }
 }
 
@@ -73,6 +85,14 @@ esp_err_t net_start(void)
     ESP_RETURN_ON_ERROR(esp_wifi_set_ps(WIFI_PS_NONE), TAG, "wifi ps");
 
     return mdns_start();
+}
+
+void net_get(net_status_t *out)
+{
+    out->state = s_state;
+    out->ip = s_ip;
+    out->last_reason = s_last_reason;
+    out->disconnects = s_disconnects;
 }
 
 int net_rssi(void)

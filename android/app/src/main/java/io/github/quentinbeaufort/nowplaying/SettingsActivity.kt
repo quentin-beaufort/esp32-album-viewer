@@ -117,7 +117,12 @@ class SettingsActivity : Activity() {
     }
 
     private fun testFrame(): Bitmap =
-        FrameRenderer.render(getString(R.string.test_title), getString(R.string.test_artist), testCover())
+        FrameRenderer.render(
+            getString(R.string.test_title),
+            getString(R.string.test_artist),
+            listOf(getString(R.string.test_featured)),
+            testCover(),
+        )
 
     private fun sendTestFrame() {
         sendTest.isEnabled = false

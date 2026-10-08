@@ -35,18 +35,29 @@ Le téléphone compose donc l'écran en **unités carrées**, sur une hauteur de
 | Zone | Rectangle | Contenu |
 |---|---|---|
 | Pochette | `x 0–480, y 0–480` | pochette carrée, pleine largeur, sans marge |
-| Texte | `x 0–480, y 480–847` | titre puis artiste, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
+| Texte | `x 0–480, y 480–847` | titre, artiste puis artistes invités, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
 
 | Élément | Police | Couleur | Position |
 |---|---|---|---|
 | Titre | gras, 38 | blanc sur fond sombre | centré sur `x = 240`, ligne de base `y = 596` |
 | Artiste | normal, 30 | couleur du titre mêlée à 20 % de fond | centré sur `x = 240`, ligne de base `y = 654` |
+| Invités | normal, 24, « feat. A, B » | couleur du titre mêlée à 35 % de fond | sous l'artiste, à la moitié de l'écart titre-artiste |
 | Fond texte | | couleur tirée de la pochette, `RGB(38, 52, 92)` à défaut | `y 480–847` |
 
 Ces valeurs reprennent l'image de test validée le 5 octobre (lignes de base 590 et 645 en pixels),
 avec la même distance physique sous la pochette.
 
-Un titre ou un artiste trop long passe sur deux lignes, puis est tronqué avec « … ».
+Un titre ou un artiste trop long passe sur deux lignes, puis est tronqué avec « … ». Avec la
+ligne des invités, le bloc de texte reste centré sur le même milieu.
+
+Les invités sont les artistes du morceau selon l'API publique de Deezer
+(`https://api.deezer.com/track/{id}`, champ `contributors`), moins l'artiste de la session
+multimédia. L'identifiant vient de l'identifiant de média de Deezer, `0.{id}`. Sans réponse en
+3 secondes, l'image part sans cette ligne.
+
+Quand la ligne des invités s'affiche, la mention d'invités du titre est retirée : « (feat. X) »,
+« [ft X] », « (featuring X) », « (with X) », « (avec X) », ou « feat. X », « - ft. X » en fin de
+titre, sans tenir compte de la casse. Sans ligne des invités, le titre reste entier.
 
 ## Routes
 
@@ -72,9 +83,10 @@ rallumé s'il était éteint.
 ### `POST /state`
 
 État de lecture, envoyé juste après `/frame`, au play et à la pause, et répété toutes les
-15 secondes tant qu'une image est affichée. Il sert surtout à détecter que l'ESP32 a perdu l'image
-(redémarrage, coupure de courant) : sans cette répétition, l'écran resterait noir jusqu'au
-morceau suivant.
+15 secondes tant qu'une image doit être affichée. Il sert surtout à détecter que l'ESP32 n'a pas
+l'image voulue (redémarrage, coupure de courant, envoi de `/frame` interrompu) : sans cette
+répétition, l'écran resterait noir ou sur l'ancien titre jusqu'au morceau suivant. Le `track_id`
+envoyé est toujours celui de la dernière image voulue, jamais d'une image plus ancienne.
 
 ```json
 { "track_id": "…", "playing": true }
@@ -91,10 +103,18 @@ puis `/state`.
 Le UGREEN s'est déconnecté : l'ESP32 éteint le rétroéclairage et oublie le morceau courant.
 Corps vide. Réponse `204`.
 
-### `GET /status`
+### `GET /status` (et `GET /`)
 
 Sans jeton, pour le débogage : JSON avec le morceau courant, l'état de lecture, le RSSI,
-l'uptime et la mémoire libre.
+l'uptime, la raison du dernier redémarrage (`reset_reason`), le nombre de coupures Wi-Fi depuis
+le démarrage (`wifi_disconnects`) et la mémoire libre.
+
+## Écran de diagnostic
+
+Du démarrage jusqu'à la première image (ou `/off`), l'ESP32 affiche en texte sur fond noir :
+raison du redémarrage, état du Wi-Fi et IP, état du serveur HTTP, dernière requête reçue et son
+résultat, mémoire libre, puis les dernières lignes du journal. Il s'éteint au bout de 10 minutes
+sans image (réglable dans `menuconfig`).
 
 ```sh
 curl http://nowplaying.local/status

@@ -195,7 +195,9 @@ class NowPlayingService : NotificationListenerService() {
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST).orEmpty()
         val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
         if (title.isEmpty() && artist.isEmpty()) return@Runnable
-        val trackId = trackId(metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID), title, artist, album)
+        val mediaId = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
+        val trackId = trackId(mediaId, title, artist, album)
+        val deezerId = DeezerApi.trackId(mediaId)
         val bitmap = ART_BITMAP_KEYS.firstNotNullOfOrNull { metadata.getBitmap(it) }
         val uri = if (bitmap == null) ART_URI_KEYS.firstNotNullOfOrNull { metadata.getString(it) } else null
 
@@ -208,7 +210,10 @@ class NowPlayingService : NotificationListenerService() {
 
         renderer.execute {
             val cover = bitmap ?: uri?.let { loadArt(it) }
-            val jpeg = FrameRenderer.toJpeg(FrameRenderer.render(title, artist, cover))
+            val featured = deezerId?.let { DeezerApi.featured(DeezerApi.contributors(it), artist) }.orEmpty()
+            // Keep the title's own "(feat. X)" when the featured line is missing.
+            val shownTitle = if (featured.isEmpty()) title else DeezerApi.titleWithoutFeaturing(title)
+            val jpeg = FrameRenderer.toJpeg(FrameRenderer.render(shownTitle, artist, featured, cover))
             sender.sendFrame(Sender.Frame(trackId, jpeg))
             handler.post { sendPlaying() }
         }

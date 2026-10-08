@@ -6,8 +6,13 @@ idf_component_register(
         "player.c"
         "net.c"
         "api.c"
+        "diag.c"
+        "touch.c"
+        "console.c"
+        "font_mono.c"
     INCLUDE_DIRS "."
     PRIV_REQUIRES
+        esp_driver_gpio
         esp_driver_i2c
         esp_lcd
         esp_wifi
