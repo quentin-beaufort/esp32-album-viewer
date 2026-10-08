@@ -34,6 +34,7 @@ Au premier lancement :
 | Fichier | Rôle |
 |---|---|
 | `NowPlayingService.kt` | `NotificationListenerService` : suit le UGREEN (A2DP) et la session de `deezer.android.app` |
+| `DeezerApi.kt` | artistes du morceau via l'API publique de Deezer, pour la ligne « feat. » |
 | `FrameRenderer.kt` | rendu portrait 480×800, rotation de 90° horaire, JPEG 800×480 |
 | `Sender.kt` | file sérialisée vers l'écran : une image en attente est remplacée par la plus récente |
 | `EspClient.kt` | résolution de l'adresse et mini client HTTP |

@@ -34,13 +34,15 @@ object FrameRenderer {
     private const val TEXT_MARGIN = 24
     private const val TITLE_SIZE = 38f
     private const val ARTIST_SIZE = 30f
+    private const val FEATURED_SIZE = 24f
     private const val TITLE_BASELINE = 596
     private const val ARTIST_BASELINE = 654
     private const val MAX_LINES = 2
     private const val JPEG_QUALITY = 90
     private val FALLBACK_BACKGROUND = Color.rgb(38, 52, 92)
 
-    fun render(title: String, artist: String, art: Bitmap?): Bitmap {
+    /** `featured`: the other artists on the track, shown under the main artist. */
+    fun render(title: String, artist: String, featured: List<String>, art: Bitmap?): Bitmap {
         val cover = art?.let { softwareCopy(it) }
         val background = cover?.let { backgroundColor(it) } ?: FALLBACK_BACKGROUND
         val out = createBitmap(WIDTH, HEIGHT)
@@ -50,7 +52,7 @@ object FrameRenderer {
         if (cover != null) {
             canvas.drawBitmap(cover, centerSquare(cover), Rect(0, 0, COVER, COVER), Paint(Paint.FILTER_BITMAP_FLAG))
         }
-        drawText(canvas, title, artist, background)
+        drawText(canvas, title, artist, featured, background)
         return out
     }
 
@@ -80,7 +82,7 @@ object FrameRenderer {
         return Rect(left, top, left + side, top + side)
     }
 
-    private fun drawText(canvas: Canvas, title: String, artist: String, background: Int) {
+    private fun drawText(canvas: Canvas, title: String, artist: String, featured: List<String>, background: Int) {
         val dark = ColorUtils.calculateLuminance(background) < 0.5
         val titleColor = if (dark) Color.WHITE else Color.rgb(17, 17, 17)
         val artistColor = ColorUtils.blendARGB(titleColor, background, 0.2f)
@@ -95,21 +97,34 @@ object FrameRenderer {
             textSize = ARTIST_SIZE
             color = artistColor
         }
+        val featuredPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            typeface = Typeface.DEFAULT
+            textSize = FEATURED_SIZE
+            color = ColorUtils.blendARGB(titleColor, background, 0.35f)
+        }
         val titleLayout = layout(title, titlePaint)
         val artistLayout = layout(artist, artistPaint)
+        val featuredLayout = if (featured.isEmpty()) null else layout("feat. " + featured.joinToString(", "), featuredPaint)
 
-        // With one line each, the baselines land exactly on TITLE_BASELINE and ARTIST_BASELINE.
-        // Longer text keeps the same gap and stays centered on the same vertical middle.
+        // With one line each and no featured artists, the baselines land exactly on TITLE_BASELINE
+        // and ARTIST_BASELINE. Longer text and the featured line keep the same gaps and stay
+        // centered on the same vertical middle.
         val titleFm = titlePaint.fontMetricsInt
         val artistFm = artistPaint.fontMetricsInt
         val gap = (ARTIST_BASELINE + artistFm.ascent) - (TITLE_BASELINE + titleFm.descent)
         val middle = ((TITLE_BASELINE + titleFm.ascent) + (ARTIST_BASELINE + artistFm.descent)) / 2f
-        val blockHeight = titleLayout.height + gap + artistLayout.height
+        val featuredGap = gap / 2
+        val blockHeight = titleLayout.height + gap + artistLayout.height +
+            (featuredLayout?.let { featuredGap + it.height } ?: 0)
         var top = middle - blockHeight / 2f
 
         canvas.withTranslation(TEXT_MARGIN.toFloat(), top) { titleLayout.draw(this) }
         top += titleLayout.height + gap
         canvas.withTranslation(TEXT_MARGIN.toFloat(), top) { artistLayout.draw(this) }
+        if (featuredLayout != null) {
+            top += artistLayout.height + featuredGap
+            canvas.withTranslation(TEXT_MARGIN.toFloat(), top) { featuredLayout.draw(this) }
+        }
     }
 
     private fun layout(text: String, paint: TextPaint): StaticLayout =

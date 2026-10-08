@@ -35,18 +35,25 @@ Le téléphone compose donc l'écran en **unités carrées**, sur une hauteur de
 | Zone | Rectangle | Contenu |
 |---|---|---|
 | Pochette | `x 0–480, y 0–480` | pochette carrée, pleine largeur, sans marge |
-| Texte | `x 0–480, y 480–847` | titre puis artiste, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
+| Texte | `x 0–480, y 480–847` | titre, artiste puis artistes invités, centrés horizontalement, sur le fond coloré (`androidx.palette`) |
 
 | Élément | Police | Couleur | Position |
 |---|---|---|---|
 | Titre | gras, 38 | blanc sur fond sombre | centré sur `x = 240`, ligne de base `y = 596` |
 | Artiste | normal, 30 | couleur du titre mêlée à 20 % de fond | centré sur `x = 240`, ligne de base `y = 654` |
+| Invités | normal, 24, « feat. A, B » | couleur du titre mêlée à 35 % de fond | sous l'artiste, à la moitié de l'écart titre-artiste |
 | Fond texte | | couleur tirée de la pochette, `RGB(38, 52, 92)` à défaut | `y 480–847` |
 
 Ces valeurs reprennent l'image de test validée le 5 octobre (lignes de base 590 et 645 en pixels),
 avec la même distance physique sous la pochette.
 
-Un titre ou un artiste trop long passe sur deux lignes, puis est tronqué avec « … ».
+Un titre ou un artiste trop long passe sur deux lignes, puis est tronqué avec « … ». Avec la
+ligne des invités, le bloc de texte reste centré sur le même milieu.
+
+Les invités sont les artistes du morceau selon l'API publique de Deezer
+(`https://api.deezer.com/track/{id}`, champ `contributors`), moins l'artiste de la session
+multimédia. L'identifiant vient de l'identifiant de média de Deezer, `0.{id}`. Sans réponse en
+3 secondes, l'image part sans cette ligne.
 
 ## Routes
 
