@@ -55,6 +55,10 @@ Les invités sont les artistes du morceau selon l'API publique de Deezer
 multimédia. L'identifiant vient de l'identifiant de média de Deezer, `0.{id}`. Sans réponse en
 3 secondes, l'image part sans cette ligne.
 
+Quand la ligne des invités s'affiche, la mention d'invités du titre est retirée : « (feat. X) »,
+« [ft X] », « (featuring X) », « (with X) », « (avec X) », ou « feat. X », « - ft. X » en fin de
+titre, sans tenir compte de la casse. Sans ligne des invités, le titre reste entier.
+
 ## Routes
 
 ### `POST /frame`

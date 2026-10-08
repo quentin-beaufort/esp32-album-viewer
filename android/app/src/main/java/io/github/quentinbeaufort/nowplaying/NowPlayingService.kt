@@ -211,7 +211,9 @@ class NowPlayingService : NotificationListenerService() {
         renderer.execute {
             val cover = bitmap ?: uri?.let { loadArt(it) }
             val featured = deezerId?.let { DeezerApi.featured(DeezerApi.contributors(it), artist) }.orEmpty()
-            val jpeg = FrameRenderer.toJpeg(FrameRenderer.render(title, artist, featured, cover))
+            // Keep the title's own "(feat. X)" when the featured line is missing.
+            val shownTitle = if (featured.isEmpty()) title else DeezerApi.titleWithoutFeaturing(title)
+            val jpeg = FrameRenderer.toJpeg(FrameRenderer.render(shownTitle, artist, featured, cover))
             sender.sendFrame(Sender.Frame(trackId, jpeg))
             handler.post { sendPlaying() }
         }

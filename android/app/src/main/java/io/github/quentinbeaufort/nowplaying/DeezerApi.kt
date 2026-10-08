@@ -55,6 +55,24 @@ object DeezerApi {
         return names
     }
 
+    /** "(feat. X)", "[ft X]", "(featuring X)", "(with X)", "(avec X)", any case. */
+    private val BRACKETED_FEATURING = Regex(
+        "\\s*[(\\[]\\s*(?:feat\\.?|ft\\.?|featuring|with|avec)\\s[^)\\]]*[)\\]]",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /** "Song feat. X", "Song - ft. X", "Song featuring X": to the end of the title. */
+    private val TRAILING_FEATURING = Regex(
+        "\\s+(?:[-–]\\s*)?(?:feat\\.?|ft\\.?|featuring)\\s.*$",
+        RegexOption.IGNORE_CASE,
+    )
+
+    /** The title without its featuring mention, which the featured line replaces. */
+    fun titleWithoutFeaturing(title: String): String {
+        val stripped = title.replace(BRACKETED_FEATURING, "").replace(TRAILING_FEATURING, "").trim()
+        return stripped.ifEmpty { title }
+    }
+
     /** The contributors not already named in the session's artist ("A", "A, B" or "A & B"). */
     fun featured(contributors: List<String>, artist: String): List<String> {
         val shown = artist.split(", ", " & ").map { it.trim().lowercase() }.toSet()
